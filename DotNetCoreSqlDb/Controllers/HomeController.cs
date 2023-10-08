@@ -1,32 +1,121 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
+using DotNetCoreSqlDb;
+using DotNetCoreSqlDb.Data;
 using DotNetCoreSqlDb.Models;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Net.Http.Headers;
 
 namespace DotNetCoreSqlDb.Controllers
 {
+    [ActionTimerFilter]
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
+        private readonly MyDatabaseContext _context;
+        private readonly IDistributedCache _cache;
+        private readonly string _JokesCacheKey = "JokesList";
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(MyDatabaseContext context, IDistributedCache cache)
         {
-            _logger = logger;
+            _context = context;
+            _cache = cache;
         }
 
-        public IActionResult Index()
+        // GET: Todos
+        public async Task<IActionResult> Index()
         {
-            return View();
+            var jokes = new List<Joke>();
+            byte[]? jokesByteArray;
+
+            jokesByteArray = await _cache.GetAsync(_JokesCacheKey);
+            if (jokesByteArray != null && jokesByteArray.Length > 0)
+            { 
+                jokes = ConvertData<Joke>.ByteArrayToObjectList(jokesByteArray);
+            }
+            else 
+            {
+                jokes = await _context.Joke.ToListAsync();
+                jokesByteArray = ConvertData<Joke>.ObjectListToByteArray(jokes);
+                await _cache.SetAsync(_JokesCacheKey, jokesByteArray);
+            }
+
+            return View(jokes);
         }
 
-        public IActionResult Privacy()
+        // GET: Todos/Details/5
+        public async Task<IActionResult> Details(int? id)
         {
-            return View();
+            byte[]? jokesByteArray;
+            Joke? joke;
+
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            jokesByteArray = await _cache.GetAsync(GetJokeCacheKey(id));
+
+            if (jokesByteArray != null && jokesByteArray.Length > 0)
+            {
+                joke = ConvertData<Joke>.ByteArrayToObject(jokesByteArray);
+            }
+            else 
+            {
+                joke = await _context.Joke
+                .FirstOrDefaultAsync(m => m.ID == id);
+            if (joke == null)
+            {
+                return NotFound();
+            }
+
+                jokesByteArray = ConvertData<Joke>.ObjectToByteArray(joke);
+                await _cache.SetAsync(GetJokeCacheKey(id), jokesByteArray);
+            }
+
+            
+
+            return View(joke);
         }
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
+        // GET: Todos/Create
+        public async Task<IActionResult> Create()
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            var joke = new Joke();
+            // http request fetch joke from https://official-joke-api.appspot.com/random_joke
+
+            HttpClient httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri("https://official-joke-api.appspot.com");
+            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            HttpResponseMessage response = await httpClient.GetAsync("/random_joke");
+            if (response.IsSuccessStatusCode)
+            {
+                Joke? newJoke = await response.Content.ReadFromJsonAsync<Joke>();
+                if (newJoke != null)
+                {
+                    _context.Add<Joke>(newJoke);
+                    await _context.SaveChangesAsync();
+                    await _cache.RemoveAsync(_JokesCacheKey);
+                }
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        private bool JokeExists(int id)
+        {
+            return _context.Joke.Any(e => e.ID == id);
+        }
+
+        private string GetJokeCacheKey(int? id)
+        {
+            return _JokesCacheKey+"_&_"+id;
         }
     }
+
+    
 }

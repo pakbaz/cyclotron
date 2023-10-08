@@ -3,10 +3,12 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DotNetCoreSqlDb.Models
 {
-    public class Todo
+    public class Joke
     {
         public int ID { get; set; }
-        public string? Description { get; set; }
+        public string? Type { get; set; }
+        public string? Setup { get; set; }
+        public string? Punchline { get; set; }
 
         [DisplayName("Created Date")]
         [DataType(DataType.Date)]
