@@ -98,9 +98,15 @@ namespace DotNetCoreSqlDb.Controllers
                 if (newJoke != null)
                 {
                     newJoke.CreatedDate = DateTime.Now;
-                    _context.Add<Joke>(newJoke);
-                    await _context.SaveChangesAsync();
-                    await _cache.RemoveAsync(_JokesCacheKey);
+                    //Check if the joke already exists
+                    var jokeExists = await _context.Joke.AnyAsync(j => j.ID == newJoke.ID);
+                    if (!jokeExists)
+                    {
+                        _context.Add(newJoke);
+                        await _context.SaveChangesAsync();
+                        await _cache.RemoveAsync(_JokesCacheKey);
+                    }
+
                 }
             }
 
