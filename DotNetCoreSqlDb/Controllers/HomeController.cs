@@ -97,6 +97,7 @@ namespace DotNetCoreSqlDb.Controllers
                 Joke? newJoke = await response.Content.ReadFromJsonAsync<Joke>();
                 if (newJoke != null)
                 {
+                    newJoke.CreatedDate = DateTime.Now;
                     _context.Add<Joke>(newJoke);
                     await _context.SaveChangesAsync();
                     await _cache.RemoveAsync(_JokesCacheKey);

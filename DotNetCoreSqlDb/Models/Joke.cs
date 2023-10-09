@@ -9,10 +9,6 @@ namespace DotNetCoreSqlDb.Models
         public string? Type { get; set; }
         public string? Setup { get; set; }
         public string? Punchline { get; set; }
-
-        [DisplayName("Created Date")]
-        [DataType(DataType.Date)]
-        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         public DateTime CreatedDate { get; set; }
     }
 }
