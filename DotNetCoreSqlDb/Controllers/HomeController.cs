@@ -13,7 +13,6 @@ using System.Net.Http.Headers;
 
 namespace DotNetCoreSqlDb.Controllers
 {
-    [ActionTimerFilter]
     public class HomeController : Controller
     {
         private readonly MyDatabaseContext _context;
