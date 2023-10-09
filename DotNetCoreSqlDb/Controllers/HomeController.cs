@@ -85,10 +85,11 @@ namespace DotNetCoreSqlDb.Controllers
         public async Task<IActionResult> Create()
         {
             var joke = new Joke();
-            // http request fetch joke from https://official-joke-api.appspot.com/random_joke
 
-            HttpClient httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri("https://official-joke-api.appspot.com");
+            HttpClient httpClient = new()
+            {
+                BaseAddress = new Uri("https://official-joke-api.appspot.com")
+            };
             httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             HttpResponseMessage response = await httpClient.GetAsync("/random_joke");
             if (response.IsSuccessStatusCode)
